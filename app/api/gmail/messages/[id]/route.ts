@@ -3,14 +3,14 @@ import { NextResponse } from "next/server";
 import { getMessageDetail } from "@/lib/google/gmail";
 
 type RouteContext = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const id = context.params.id;
+    const { id } = await context.params;
     if (!id) {
       return NextResponse.json(
         { error: "Message id is required" },

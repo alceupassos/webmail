@@ -65,9 +65,16 @@ function stripHtml(html: string) {
   return withoutStyles.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+type BodyCandidate = { content: string; mimeType: "text/plain" | "text/html" };
+type HtmlCandidate = { content: string; mimeType: "text/html" };
+
+function isHtmlCandidate(candidate: BodyCandidate): candidate is HtmlCandidate {
+  return candidate.mimeType === "text/html";
+}
+
 function extractBestBody(
   part: gmail_v1.Schema$MessagePart | undefined,
-): { content: string; mimeType: "text/plain" | "text/html" } | null {
+): BodyCandidate | null {
   if (!part) {
     return null;
   }
@@ -84,7 +91,7 @@ function extractBestBody(
     return null;
   }
 
-  let htmlCandidate: { content: string; mimeType: "text/html" } | null = null;
+  let htmlCandidate: HtmlCandidate | null = null;
 
   for (const child of part.parts) {
     const found = extractBestBody(child);
@@ -94,7 +101,7 @@ function extractBestBody(
     if (found.mimeType === "text/plain") {
       return found;
     }
-    if (!htmlCandidate) {
+    if (!htmlCandidate && isHtmlCandidate(found)) {
       htmlCandidate = found;
     }
   }

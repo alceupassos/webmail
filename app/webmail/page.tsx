@@ -1,11 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
 
 import { WebmailLayout } from "@/components/webmail/webmail-layout";
-import { listInboxMessages } from "@/lib/google/gmail";
+import { listInboxMessages, type GmailMessageSummary } from "@/lib/google/gmail";
 
 export default async function WebmailPage() {
   noStore();
-  let messages = [];
+  let messages: GmailMessageSummary[] = [];
   let error: string | null = null;
 
   try {
