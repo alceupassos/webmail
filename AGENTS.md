@@ -36,3 +36,9 @@ Run these from `email-prod/`:
 - Copy `.env.example` to `.env.local` and set Supabase values.
 - Keep secrets out of Git; document new required env vars in `.env.example`.
 - Gmail webmail requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `GOOGLE_REFRESH_TOKEN` plus a display label in `NEXT_PUBLIC_GMAIL_ACCOUNT`.
+
+## Multi-Provider Email Configuration
+- Current implementation supports Gmail only; IMAP/Microsoft require adding provider adapters.
+- For IMAP, keep host/port/TLS/username/app password server-side; never expose secrets via `NEXT_PUBLIC_*`.
+- For Google and Microsoft, use OAuth2 refresh tokens with server-only client IDs and secrets.
+- When adding multiple accounts, keep a single source of truth (config file or DB) with `provider`, `email`, and `label`, and document new env vars in `.env.example`.
