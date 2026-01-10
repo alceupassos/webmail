@@ -35,3 +35,4 @@ Run these from `email-prod/`:
 ## Configuration & Secrets
 - Copy `.env.example` to `.env.local` and set Supabase values.
 - Keep secrets out of Git; document new required env vars in `.env.example`.
+- Gmail webmail requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `GOOGLE_REFRESH_TOKEN` plus a display label in `NEXT_PUBLIC_GMAIL_ACCOUNT`.
