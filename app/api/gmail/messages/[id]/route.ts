@@ -2,9 +2,6 @@ import { NextResponse } from "next/server";
 
 import { getMessageDetail } from "@/lib/google/gmail";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 type RouteContext = {
   params: {
     id: string;

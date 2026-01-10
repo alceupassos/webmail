@@ -1,10 +1,10 @@
+import { unstable_noStore as noStore } from "next/cache";
+
 import { WebmailLayout } from "@/components/webmail/webmail-layout";
 import { listInboxMessages } from "@/lib/google/gmail";
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
 export default async function WebmailPage() {
+  noStore();
   let messages = [];
   let error: string | null = null;
 
