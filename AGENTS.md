@@ -10,7 +10,7 @@
 ## Build, Test, and Development Commands
 Run these from `email-prod/`:
 - `npm install` installs dependencies (lockfile: `package-lock.json`).
-- `npm run dev` starts the Next.js dev server at `http://localhost:3000`.
+- `npm run dev` starts the Next.js dev server at `http://localhost:7000`.
 - `npm run build` creates a production build.
 - `npm run start` serves the production build.
 - `npm run lint` runs ESLint with `next/core-web-vitals`.
