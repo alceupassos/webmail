@@ -37,6 +37,11 @@ Run these from `email-prod/`:
 - Keep secrets out of Git; document new required env vars in `.env.example`.
 - Gmail webmail requires `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, and `GOOGLE_REFRESH_TOKEN` plus a display label in `NEXT_PUBLIC_GMAIL_ACCOUNT`.
 
+## 2026 Webmail & Automation Notes
+- Scheduled summaries at morning/12:00/15:00/18:00 for important, pending, and unreplied emails, prioritizing CEPALAB and preferred senders.
+- Email journey dashboard (responded vs pending) and tracked addresses with on-screen alerts.
+- CEPALAB.IA chat sidebar and reply suggestion panels (UI placeholders until backend integration).
+
 ## Multi-Provider Email Configuration
 - Current implementation supports Gmail only; IMAP/Microsoft require adding provider adapters.
 - For IMAP, keep host/port/TLS/username/app password server-side; never expose secrets via `NEXT_PUBLIC_*`.

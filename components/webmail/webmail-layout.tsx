@@ -28,6 +28,7 @@ type TrackedAddress = {
   address: string;
   active: boolean;
   alert: boolean;
+  preferred: boolean;
 };
 
 function formatListDate(value: string) {
@@ -104,6 +105,12 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [newAddress, setNewAddress] = useState("");
   const [trackingNote, setTrackingNote] = useState<string | null>(null);
+  const [summarySchedule, setSummarySchedule] = useState({
+    morning: true,
+    noon: true,
+    afternoon: true,
+    evening: true,
+  });
   const [trackedAddresses, setTrackedAddresses] = useState<TrackedAddress[]>(
     () => {
       const candidate = process.env.NEXT_PUBLIC_GMAIL_ACCOUNT ?? "";
@@ -114,6 +121,7 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
               address: candidate,
               active: true,
               alert: true,
+              preferred: true,
             },
           ]
         : [];
@@ -214,6 +222,11 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
       pendingCount: pending.length,
     };
   }, [messages]);
+
+  const preferredAddresses = useMemo(
+    () => trackedAddresses.filter((item) => item.preferred),
+    [trackedAddresses],
+  );
 
   useEffect(() => {
     setDraftReply("");
@@ -322,19 +335,38 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
     }
     setTrackedAddresses((current) => [
       ...current,
-      { id: createId(), address: trimmed, active: true, alert: true },
+      {
+        id: createId(),
+        address: trimmed,
+        active: true,
+        alert: true,
+        preferred: false,
+      },
     ]);
     setNewAddress("");
     setTrackingNote("Endereco adicionado.");
   }, [newAddress, trackedAddresses]);
 
-  const handleToggleTracked = useCallback((id: string, field: "active" | "alert") => {
-    setTrackedAddresses((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, [field]: !item[field] } : item,
-      ),
-    );
-  }, []);
+  const handleToggleTracked = useCallback(
+    (id: string, field: "active" | "alert" | "preferred") => {
+      setTrackedAddresses((current) =>
+        current.map((item) =>
+          item.id === id ? { ...item, [field]: !item[field] } : item,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleToggleSchedule = useCallback(
+    (field: "morning" | "noon" | "afternoon" | "evening") => {
+      setSummarySchedule((current) => ({
+        ...current,
+        [field]: !current[field],
+      }));
+    },
+    [],
+  );
 
   const handleRemoveTracked = useCallback((id: string) => {
     setTrackedAddresses((current) => current.filter((item) => item.id !== id));
@@ -400,7 +432,7 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
           </aside>
 
           <div className="flex flex-col gap-6">
-            <section className="grid gap-4 md:grid-cols-2">
+            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <div className="rounded-lg border bg-card p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-semibold">
@@ -494,11 +526,11 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
                             Remover
                           </Button>
                         </div>
-                        <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                          <label className="flex items-center gap-2">
-                            <Checkbox
-                              checked={item.active}
-                              onCheckedChange={() =>
+                        <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+                        <label className="flex items-center gap-2">
+                          <Checkbox
+                            checked={item.active}
+                            onCheckedChange={() =>
                                 handleToggleTracked(item.id, "active")
                               }
                             />
@@ -513,6 +545,15 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
                             />
                             Alerta na tela
                           </label>
+                          <label className="flex items-center gap-2">
+                            <Checkbox
+                              checked={item.preferred}
+                              onCheckedChange={() =>
+                                handleToggleTracked(item.id, "preferred")
+                              }
+                            />
+                            Preferencial
+                          </label>
                         </div>
                       </div>
                     ))
@@ -526,6 +567,64 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
                       {trackingNote}
                     </p>
                   ) : null}
+                </div>
+              </div>
+
+              <div className="rounded-lg border bg-card p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">
+                    Resumo programado
+                  </span>
+                  <Badge variant="secondary">Agenda</Badge>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Envio automatico com inicio do titulo de emails importantes,
+                  pendentes e sem resposta.
+                </p>
+                <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={summarySchedule.morning}
+                      onCheckedChange={() => handleToggleSchedule("morning")}
+                    />
+                    Inicio da manha (07:30)
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={summarySchedule.noon}
+                      onCheckedChange={() => handleToggleSchedule("noon")}
+                    />
+                    12:00
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={summarySchedule.afternoon}
+                      onCheckedChange={() => handleToggleSchedule("afternoon")}
+                    />
+                    15:00
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <Checkbox
+                      checked={summarySchedule.evening}
+                      onCheckedChange={() => handleToggleSchedule("evening")}
+                    />
+                    18:00
+                  </label>
+                </div>
+                <div className="mt-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground">Inclui</p>
+                  <ul className="mt-2 space-y-1">
+                    <li>Importantes, pendentes e sem resposta</li>
+                    <li>CEPALAB e emails preferenciais</li>
+                    <li>
+                      Preferenciais:{" "}
+                      {preferredAddresses.length
+                        ? preferredAddresses
+                            .map((item) => item.address)
+                            .join(", ")
+                        : "cepalab"}
+                    </li>
+                  </ul>
                 </div>
               </div>
             </section>
