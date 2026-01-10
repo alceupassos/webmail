@@ -47,6 +47,26 @@ function formatDetailDate(value: string) {
   });
 }
 
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function truncateText(value: string, limit: number) {
+  if (value.length <= limit) {
+    return value;
+  }
+  return `${value.slice(0, limit).trim()}...`;
+}
+
+function getSenderLabel(value: string) {
+  const match = value.match(/^(.*?)</);
+  if (!match) {
+    return value;
+  }
+  const cleaned = match[1].replace(/["']/g, "").trim();
+  return cleaned || value;
+}
+
 export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [selectedId, setSelectedId] = useState(
@@ -59,6 +79,9 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
   const [detailError, setDetailError] = useState<string | null>(null);
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [draftReply, setDraftReply] = useState("");
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [actionNote, setActionNote] = useState<string | null>(null);
 
   const filteredMessages = useMemo(() => {
     if (!query.trim()) {
@@ -140,8 +163,68 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
     }
   }, [selectedId, loadMessage]);
 
+  useEffect(() => {
+    setDraftReply("");
+    setCopyStatus(null);
+    setActionNote(null);
+  }, [selectedId]);
+
   const accountLabel =
     process.env.NEXT_PUBLIC_GMAIL_ACCOUNT ?? "Google Mail";
+
+  const summary = useMemo(() => {
+    if (!selectedMessage) {
+      return null;
+    }
+    const source = normalizeText(
+      selectedMessage.body || selectedMessage.snippet || "",
+    );
+    const summaryText = source
+      ? truncateText(source, 240)
+      : "Resumo indisponivel.";
+    return {
+      summaryText,
+      highlights: [
+        `Assunto: ${selectedMessage.subject}`,
+        `Remetente: ${selectedMessage.from}`,
+        `Data: ${formatDetailDate(selectedMessage.date)}`,
+      ],
+    };
+  }, [selectedMessage]);
+
+  const replySuggestions = useMemo(() => {
+    if (!selectedMessage) {
+      return [];
+    }
+    const senderLabel = getSenderLabel(selectedMessage.from);
+    const subjectLabel = selectedMessage.subject || "sua mensagem";
+    return [
+      `Ola ${senderLabel}, obrigado pelo email sobre ${subjectLabel}. Vou analisar e retorno em breve.`,
+      `Recebido, ${senderLabel}. Posso confirmar os proximos passos?`,
+      "Obrigado! Poderia enviar mais informacoes ou anexos para seguirmos?",
+    ];
+  }, [selectedMessage]);
+
+  const handleCopy = useCallback(async () => {
+    if (!draftReply.trim()) {
+      setCopyStatus("Nada para copiar.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(draftReply);
+      setCopyStatus("Copiado.");
+    } catch (copyError) {
+      setCopyStatus(
+        copyError instanceof Error
+          ? copyError.message
+          : "Falha ao copiar.",
+      );
+    }
+  }, [draftReply]);
+
+  const handleAction = useCallback((label: string) => {
+    setActionNote(`Acao registrada: ${label}.`);
+  }, []);
 
   return (
     <div className="min-h-screen bg-muted/40">
@@ -284,6 +367,112 @@ export function WebmailLayout({ initialMessages, error }: WebmailLayoutProps) {
                       <p className="whitespace-pre-wrap">
                         {selectedMessage.body}
                       </p>
+                    </div>
+                    <div className="grid gap-4 pt-2 lg:grid-cols-2">
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">
+                            Resumo CEPALAB.IA (CHAT GPT 5.2.MINI)
+                          </span>
+                          <Badge variant="secondary">Auto</Badge>
+                        </div>
+                        <p className="mt-3 text-sm text-foreground">
+                          {summary?.summaryText ??
+                            "Selecione um email para gerar o resumo."}
+                        </p>
+                        <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
+                          {summary?.highlights.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">
+                            Sugestoes de resposta automatica pre-pronta
+                          </span>
+                          <Badge variant="secondary">Beta</Badge>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {replySuggestions.map((suggestion) => (
+                            <Button
+                              key={suggestion}
+                              variant="outline"
+                              size="sm"
+                              className="h-auto whitespace-normal text-left"
+                              onClick={() => {
+                                setDraftReply(suggestion);
+                                setCopyStatus(null);
+                              }}
+                            >
+                              {truncateText(suggestion, 80)}
+                            </Button>
+                          ))}
+                          {replySuggestions.length === 0 ? (
+                            <span className="text-xs text-muted-foreground">
+                              Nenhuma sugestao disponivel.
+                            </span>
+                          ) : null}
+                        </div>
+                        <textarea
+                          className="mt-3 min-h-[120px] w-full resize-none rounded-md border bg-background p-3 text-sm"
+                          placeholder="Rascunho da resposta..."
+                          value={draftReply}
+                          onChange={(event) => setDraftReply(event.target.value)}
+                        />
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button variant="secondary" onClick={handleCopy}>
+                            Copiar resposta
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => {
+                              setDraftReply("");
+                              setCopyStatus(null);
+                            }}
+                          >
+                            Limpar
+                          </Button>
+                        </div>
+                        {copyStatus ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            {copyStatus}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-semibold">
+                          Outras funcoes
+                        </span>
+                        <Badge variant="secondary">Preview</Badge>
+                      </div>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                        {[
+                          "Marcar como importante",
+                          "Criar tarefa",
+                          "Salvar contato",
+                          "Adicionar lembrete",
+                        ].map((label) => (
+                          <Button
+                            key={label}
+                            variant="outline"
+                            onClick={() => handleAction(label)}
+                          >
+                            {label}
+                          </Button>
+                        ))}
+                      </div>
+                      {actionNote ? (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          {actionNote}
+                        </p>
+                      ) : (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Funcoes adicionais aguardam integracao.
+                        </p>
+                      )}
                     </div>
                   </>
                 ) : (
