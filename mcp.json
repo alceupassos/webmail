@@ -1,0 +1,215 @@
+{
+    "$schema": "https://raw.githubusercontent.com/anthropics/model-context-protocol/main/schema/mcp-config.schema.json",
+    "name": "webmail-mcp",
+    "version": "1.0.0",
+    "description": "MCP Server for Webmail - Exposes email functionality to AI assistants, WhatsApp, mobile apps and other automation tools",
+    "author": "Webmail Team",
+    "license": "MIT",
+    "capabilities": {
+        "tools": true,
+        "resources": true
+    },
+    "tools": [
+        {
+            "name": "list_emails",
+            "description": "List emails from the inbox. Returns subject, sender, date, and preview for each email.",
+            "parameters": {
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "gmail",
+                        "microsoft",
+                        "imap"
+                    ],
+                    "description": "Email provider to use (default: gmail)",
+                    "optional": true
+                },
+                "maxResults": {
+                    "type": "number",
+                    "description": "Maximum number of emails to return (default: 25)",
+                    "optional": true
+                }
+            }
+        },
+        {
+            "name": "get_email",
+            "description": "Get full details of a specific email by its ID, including the complete body content.",
+            "parameters": {
+                "id": {
+                    "type": "string",
+                    "description": "Email ID to retrieve",
+                    "required": true
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "gmail",
+                        "microsoft",
+                        "imap"
+                    ],
+                    "description": "Email provider",
+                    "optional": true
+                }
+            }
+        },
+        {
+            "name": "search_emails",
+            "description": "Search emails by query. Searches in subject, sender, and content.",
+            "parameters": {
+                "query": {
+                    "type": "string",
+                    "description": "Search query",
+                    "required": true
+                },
+                "maxResults": {
+                    "type": "number",
+                    "description": "Maximum number of results (default: 10)",
+                    "optional": true
+                }
+            }
+        },
+        {
+            "name": "get_email_summary",
+            "description": "Get a summary of an email including key points, action items, and sentiment.",
+            "parameters": {
+                "id": {
+                    "type": "string",
+                    "description": "Email ID to summarize",
+                    "required": true
+                },
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "gmail",
+                        "microsoft",
+                        "imap"
+                    ],
+                    "description": "Email provider",
+                    "optional": true
+                }
+            }
+        },
+        {
+            "name": "test_connection",
+            "description": "Test connection to an email provider. For IMAP, provide connection details.",
+            "parameters": {
+                "provider": {
+                    "type": "string",
+                    "enum": [
+                        "gmail",
+                        "microsoft",
+                        "imap"
+                    ],
+                    "description": "Provider to test",
+                    "required": true
+                },
+                "imap_host": {
+                    "type": "string",
+                    "description": "IMAP server hostname (for IMAP provider)",
+                    "optional": true
+                },
+                "imap_port": {
+                    "type": "number",
+                    "description": "IMAP server port (default: 993)",
+                    "optional": true
+                },
+                "imap_username": {
+                    "type": "string",
+                    "description": "IMAP username",
+                    "optional": true
+                },
+                "imap_password": {
+                    "type": "string",
+                    "description": "IMAP password",
+                    "optional": true
+                },
+                "imap_use_tls": {
+                    "type": "boolean",
+                    "description": "Use TLS/SSL (default: true)",
+                    "optional": true
+                }
+            }
+        },
+        {
+            "name": "list_alerts",
+            "description": "List pending mobile alerts",
+            "parameters": {
+                "priority": {
+                    "type": "string",
+                    "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                    ],
+                    "description": "Filter by priority",
+                    "optional": true
+                }
+            }
+        },
+        {
+            "name": "create_alert",
+            "description": "Create a new alert based on an email",
+            "parameters": {
+                "email_id": {
+                    "type": "string",
+                    "description": "Email ID to alert",
+                    "required": true
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "urgent",
+                        "important",
+                        "newsletter",
+                        "social",
+                        "promo"
+                    ],
+                    "description": "Alert type",
+                    "optional": true
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": [
+                        "high",
+                        "medium",
+                        "low"
+                    ],
+                    "description": "Alert priority",
+                    "optional": true
+                },
+                "title": {
+                    "type": "string",
+                    "description": "Alert title",
+                    "required": true
+                },
+                "preview": {
+                    "type": "string",
+                    "description": "Short preview text",
+                    "optional": true
+                }
+            }
+        }
+    ],
+    "resources": [
+        {
+            "uri": "webmail://accounts",
+            "name": "Email Accounts",
+            "description": "List of configured email accounts",
+            "mimeType": "application/json"
+        },
+        {
+            "uri": "webmail://inbox/summary",
+            "name": "Inbox Summary",
+            "description": "Summary of inbox status including unread count and recent emails",
+            "mimeType": "application/json"
+        }
+    ],
+    "server": {
+        "command": "npm",
+        "args": [
+            "run",
+            "mcp"
+        ],
+        "cwd": "."
+    }
+}
