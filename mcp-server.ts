@@ -33,6 +33,31 @@ import { z } from "zod";
 // Import email providers
 import { listInboxMessages as listGmailMessages, getMessageDetail as getGmailDetail } from "./lib/google/gmail.js";
 import { testConnection as testImapConnection, type ImapConfig } from "./lib/imap/imap.js";
+import { createClient } from "@supabase/supabase-js";
+
+// Initialize Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+async function getGmailCredentials() {
+    if (process.env.GOOGLE_REFRESH_TOKEN) {
+        return { refresh_token: process.env.GOOGLE_REFRESH_TOKEN };
+    }
+
+    const { data, error } = await supabase
+        .from("email_accounts")
+        .select("oauth_refresh_token")
+        .eq("provider", "gmail")
+        .eq("is_primary", true)
+        .single();
+
+    if (error || !data?.oauth_refresh_token) {
+        return undefined;
+    }
+
+    return { refresh_token: data.oauth_refresh_token };
+}
 
 // Tool input schemas
 const ListEmailsSchema = z.object({
@@ -274,7 +299,8 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 
     if (uri === "webmail://inbox/summary") {
         try {
-            const messages = await listGmailMessages({ maxResults: 10 });
+            const credentials = await getGmailCredentials();
+            const messages = await listGmailMessages({ maxResults: 10, credentials });
             const unread = messages.filter((m) => !m.snippet.startsWith("RE:")).length;
 
             return {
@@ -321,7 +347,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const provider = parsed.provider ?? "gmail";
 
                 if (provider === "gmail") {
-                    const messages = await listGmailMessages({ maxResults: parsed.maxResults });
+                    const credentials = await getGmailCredentials();
+                    const messages = await listGmailMessages({ maxResults: parsed.maxResults, credentials });
                     return {
                         content: [
                             {
@@ -347,7 +374,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const provider = parsed.provider ?? "gmail";
 
                 if (provider === "gmail") {
-                    const message = await getGmailDetail(parsed.id);
+                    const credentials = await getGmailCredentials();
+                    const message = await getGmailDetail(parsed.id, credentials);
                     return {
                         content: [
                             {
@@ -372,7 +400,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const parsed = SearchEmailsSchema.parse(args);
 
                 // For now, list emails and filter client-side
-                const messages = await listGmailMessages({ maxResults: 50 });
+                const credentials = await getGmailCredentials();
+                const messages = await listGmailMessages({ maxResults: 50, credentials });
                 const query = parsed.query.toLowerCase();
                 const filtered = messages.filter((m) =>
                     m.subject.toLowerCase().includes(query) ||
@@ -399,7 +428,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 const provider = parsed.provider ?? "gmail";
 
                 if (provider === "gmail") {
-                    const message = await getGmailDetail(parsed.id);
+                    const credentials = await getGmailCredentials();
+                    const message = await getGmailDetail(parsed.id, credentials);
 
                     // Generate a simple summary (in production, use AI)
                     const bodyPreview = message.body.slice(0, 500);
@@ -523,23 +553,51 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             }
 
             case "list_alerts": {
-                // Filter would go here in real implementation
+                const { data, error } = await supabase
+                    .from("email_alerts")
+                    .select("*")
+                    .order("created_at", { ascending: false })
+                    .limit(20);
+
+                if (error) throw error;
+
                 return {
                     content: [{
                         type: "text",
-                        text: JSON.stringify([
-                            { id: "1", title: "Urgent: System Down", priority: "high" },
-                            { id: "2", title: "New Lead", priority: "medium" }
-                        ], null, 2)
+                        text: JSON.stringify(data, null, 2)
                     }]
                 };
             }
 
             case "create_alert": {
+                // In a real scenario, we would need to know which USER_ID to use.
+                // For demonstration, we'll try to find the first user if not provided,
+                // or use a placeholder if empty.
+                const { data: userData } = await supabase.auth.admin.listUsers();
+                const userId = userData?.users[0]?.id || "00000000-0000-0000-0000-000000000000";
+                const alertArgs = args as { email_id: string, title: string, preview: string, type?: string, priority?: string };
+
+                const { data, error } = await supabase
+                    .from("email_alerts")
+                    .insert({
+                        user_id: userId,
+                        email_id: alertArgs.email_id,
+                        title: alertArgs.title,
+                        preview: alertArgs.preview,
+                        type: alertArgs.type || "urgent",
+                        priority: alertArgs.priority || "high",
+                        read: false,
+                        pushed_to_mobile: true
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
                 return {
                     content: [{
                         type: "text",
-                        text: JSON.stringify({ success: true, message: "Alert created" })
+                        text: JSON.stringify({ success: true, alert: data })
                     }]
                 };
             }

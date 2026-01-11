@@ -5,7 +5,6 @@ const REQUIRED_ENV = [
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
   "GOOGLE_REDIRECT_URI",
-  "GOOGLE_REFRESH_TOKEN",
 ];
 
 function getEnvValue(name: string) {
@@ -16,7 +15,7 @@ function getEnvValue(name: string) {
   return value;
 }
 
-function createGmailClient() {
+function createGmailClient(credentials?: { refresh_token: string }) {
   for (const name of REQUIRED_ENV) {
     getEnvValue(name);
   }
@@ -27,8 +26,14 @@ function createGmailClient() {
     process.env.GOOGLE_REDIRECT_URI,
   );
 
+  const refreshToken = credentials?.refresh_token || process.env.GOOGLE_REFRESH_TOKEN;
+
+  if (!refreshToken) {
+    throw new Error("Google Refresh Token not found. Please configure GOOGLE_REFRESH_TOKEN or add an account via OAuth.");
+  }
+
   oauth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_REFRESH_TOKEN,
+    refresh_token: refreshToken,
   });
 
   return google.gmail({ version: "v1", auth: oauth2Client });
@@ -122,8 +127,8 @@ export type GmailMessageDetail = GmailMessageSummary & {
   body: string;
 };
 
-export async function listInboxMessages(options?: { maxResults?: number }) {
-  const gmail = createGmailClient();
+export async function listInboxMessages(options?: { maxResults?: number, credentials?: { refresh_token: string } }) {
+  const gmail = createGmailClient(options?.credentials);
   const maxResults = options?.maxResults ?? 20;
 
   const listResponse = await gmail.users.messages.list({
@@ -168,8 +173,8 @@ export async function listInboxMessages(options?: { maxResults?: number }) {
   return details.filter((item): item is GmailMessageSummary => item !== null);
 }
 
-export async function getMessageDetail(id: string) {
-  const gmail = createGmailClient();
+export async function getMessageDetail(id: string, credentials?: { refresh_token: string }) {
+  const gmail = createGmailClient(credentials);
 
   const detail = await gmail.users.messages.get({
     userId: "me",
