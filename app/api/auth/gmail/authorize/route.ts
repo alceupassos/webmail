@@ -1,25 +1,24 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
+import { getOAuthCredentials } from "@/lib/oauth-credentials";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const state = searchParams.get("state") ?? "";
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const credentials = await getOAuthCredentials('google');
 
-    if (!clientId || !clientSecret || !redirectUri) {
+    if (!credentials) {
         return NextResponse.json(
-            { error: "Google OAuth credentials not configured" },
-            { status: 500 }
+            { error: "Google OAuth credentials not configured. Please set them in config." },
+            { status: 400 }
         );
     }
 
     const oauth2Client = new google.auth.OAuth2(
-        clientId,
-        clientSecret,
-        redirectUri
+        credentials.clientId,
+        credentials.clientSecret,
+        credentials.redirectUri
     );
 
     const authUrl = oauth2Client.generateAuthUrl({

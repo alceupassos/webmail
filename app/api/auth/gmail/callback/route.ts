@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createEmailAccount } from "@/lib/email-accounts";
+import { getOAuthCredentials } from "@/lib/oauth-credentials";
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -19,21 +20,19 @@ export async function GET(request: Request) {
         );
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+    const credentials = await getOAuthCredentials('google');
 
-    if (!clientId || !clientSecret || !redirectUri) {
+    if (!credentials) {
         return NextResponse.redirect(
-            new URL("/webmail/config?error=oauth_not_configured", request.url)
+            new URL("/webmail/config?error=oauth_not_configured_in_database", request.url)
         );
     }
 
     try {
         const oauth2Client = new google.auth.OAuth2(
-            clientId,
-            clientSecret,
-            redirectUri
+            credentials.clientId,
+            credentials.clientSecret,
+            credentials.redirectUri
         );
 
         // Exchange code for tokens

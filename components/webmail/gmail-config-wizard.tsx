@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type WizardStep = "intro" | "oauth" | "complete";
+import { OAuthCredentialsForm } from "./oauth-credentials-form";
+
+type WizardStep = "credentials" | "intro" | "oauth" | "complete";
 
 interface GmailConfigWizardProps {
     onComplete: () => void;
@@ -15,7 +17,7 @@ export function GmailConfigWizard({
     onComplete,
     onCancel,
 }: GmailConfigWizardProps) {
-    const [step, setStep] = useState<WizardStep>("intro");
+    const [step, setStep] = useState<WizardStep>("credentials");
     const [label, setLabel] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,14 @@ export function GmailConfigWizard({
                     </Button>
                 </header>
 
-                <div className="rounded-lg border bg-card p-6 shadow-sm">
+                <div className="rounded-lg border bg-card p-6 shadow-sm glass-card border-white/10">
+                    {step === "credentials" && (
+                        <OAuthCredentialsForm
+                            provider="google"
+                            onSuccess={() => setStep("intro")}
+                        />
+                    )}
+
                     {step === "intro" && (
                         <div className="space-y-6">
                             <div className="space-y-2">
@@ -68,30 +77,36 @@ export function GmailConfigWizard({
                                     placeholder="Ex: Trabalho, Pessoal..."
                                     value={label}
                                     onChange={(e) => setLabel(e.target.value)}
+                                    className="bg-black/20 border-white/10"
                                 />
                                 <p className="text-xs text-muted-foreground">
                                     Um nome para identificar esta conta
                                 </p>
                             </div>
 
-                            <div className="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
-                                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                                    Requisitos
+                            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-4">
+                                <h3 className="text-sm font-semibold text-emerald-400">
+                                    Tudo Pronto!
                                 </h3>
-                                <ul className="mt-2 space-y-1 text-xs text-blue-800 dark:text-blue-200">
-                                    <li>✓ Conta Google ativa</li>
-                                    <li>✓ Gmail API habilitada no Google Cloud Console</li>
-                                    <li>✓ Credenciais OAuth2 configuradas</li>
+                                <ul className="mt-2 space-y-1 text-xs text-emerald-300/70">
+                                    <li>✓ Projeto Google Cloud Configurado no Supabase</li>
+                                    <li>✓ Redirect URI Autorizada</li>
+                                    <li>✓ Conta Google Ativa disponível</li>
                                 </ul>
                             </div>
 
-                            <Button
-                                className="w-full"
-                                onClick={() => setStep("oauth")}
-                                size="lg"
-                            >
-                                Continuar
-                            </Button>
+                            <div className="flex gap-3">
+                                <Button variant="ghost" onClick={() => setStep("credentials")}>
+                                    Ajustar Credenciais
+                                </Button>
+                                <Button
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-500"
+                                    onClick={() => setStep("oauth")}
+                                    size="lg"
+                                >
+                                    Continuar
+                                </Button>
+                            </div>
                         </div>
                     )}
 
@@ -115,7 +130,7 @@ export function GmailConfigWizard({
 
                             <div className="flex flex-col gap-3">
                                 <Button
-                                    className="w-full"
+                                    className="w-full bg-emerald-600 hover:bg-emerald-500"
                                     onClick={handleOAuthConnect}
                                     disabled={isLoading}
                                     size="lg"
